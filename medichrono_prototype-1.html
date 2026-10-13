@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediChrono — AI Clinical Intake</title>
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --surface:#FFFFFF;
+    --ink:#0D0D0D;
+    --ink-soft:#4A4A4A;
+    --teal-900:#0D0D0D;
+    --teal-700:#E8590C;
+    --teal-600:#F76707;
+    --teal-400:#FFA94D;
+    --teal-100:#FFF1E3;
+    --amber:#B9740E;
+    --amber-bg:#FBF0DD;
+    --red:#A83A2D;
+    --red-bg:#FBE7E3;
+    --green:#2E7D5B;
+    --green-bg:#E4F3EA;
+    --yellow:#9C7F14;
+    --yellow-bg:#FBF3D6;
+    --grey:#8C9490;
+    --grey-bg:#EEEEEB;
+    --line:#DCE0DA;
+    --radius-kiosk:22px;
+    --radius-card:10px;
+    --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-sans);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3{font-family:var(--font-serif); font-weight:600; margin:0 0 .3em 0; color:var(--ink);}
+  p{line-height:1.55; color:var(--ink-soft);}
+  a{color:inherit;}
+  button{font-family:inherit; cursor:pointer;}
+  .screen{display:none; min-height:100vh;}
+  .screen.active{display:block;}
+  .visually-hidden{position:absolute; left:-9999px;}
+
+  /* ---------- shared buttons ---------- */
+  .btn{
+    border:none; border-radius:10px; padding:14px 22px; font-size:16px; font-weight:600;
+    display:inline-flex; align-items:center; gap:8px; transition:transform .08s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--teal-700); color:#fff;}
+  .btn-primary:hover{background:var(--teal-900);}
+  .btn-outline{background:transparent; color:var(--teal-700); border:1.5px solid var(--teal-600);}
+  .btn-outline:hover{background:var(--teal-100);}
+  .btn-ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
+  .btn-danger-outline{background:transparent; color:var(--red); border:1.5px solid var(--red);}
+  .btn-sm{padding:8px 14px; font-size:14px; border-radius:8px;}
+  .btn-block{width:100%; justify-content:center;}
+  .btn[disabled]{opacity:.45; cursor:not-allowed;}
+
+  /* ---------- badges ---------- */
+  .badge{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12.5px; font-weight:700;}
+  .badge-red{background:var(--red-bg); color:var(--red);}
+  .badge-amber{background:var(--amber-bg); color:var(--amber);}
+  .badge-yellow{background:var(--yellow-bg); color:var(--yellow);}
+  .badge-green{background:var(--green-bg); color:var(--green);}
+  .badge-grey{background:var(--grey-bg); color:var(--grey);}
+  .badge-teal{background:var(--teal-100); color:var(--teal-700);}
+
+  /* =========================================================
+     LANDING PAGE
+     ========================================================= */
+  #screen-landing .wrap{max-width:1040px; margin:0 auto; padding:28px 24px 80px;}
+  .landing-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:56px;}
+  .brand{display:flex; align-items:center; gap:10px; font-family:var(--font-serif); font-size:22px; font-weight:700; color:var(--teal-900);}
+  .brand .mark{width:34px; height:34px; border-radius:9px; background:var(--teal-700); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-sans); font-weight:800;}
+  .demo-pill{font-size:12.5px; color:var(--teal-700); border:1px solid var(--teal-400); background:var(--teal-100); padding:6px 12px; border-radius:999px; font-weight:600;}
+
+  .hero{display:grid; grid-template-columns:1.15fr .85fr; gap:48px; align-items:center; margin-bottom:64px;}
+  .hero h1{font-size:44px; line-height:1.12; max-width:11.5em;}
+  .hero .lede{font-size:17.5px; max-width:34em; margin-top:14px;}
+  .hero-actions{display:flex; gap:12px; margin-top:26px; flex-wrap:wrap;}
+  .read-aloud-btn{background:#fff; border:1px solid var(--line); color:var(--teal-700); border-radius:999px; padding:9px 16px; font-size:14px; font-weight:600; display:inline-flex; gap:8px; align-items:center;}
+  .read-aloud-btn:hover{border-color:var(--teal-600);}
+  .hero-panel{background:var(--teal-900); border-radius:20px; padding:30px; color:#FFF1E3;}
+  .hero-panel .stat{display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.14); font-size:14.5px;}
+  .hero-panel .stat:last-child{border-bottom:none;}
+  .hero-panel .stat b{font-family:var(--font-serif); font-size:20px; display:block; color:#fff;}
+
+  .role-grid{display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:16px; margin-bottom:44px;}
+  .role-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px; display:flex; flex-direction:column; gap:12px;}
+  .role-card.primary{background:var(--teal-700); border-color:var(--teal-700); color:#fff;}
+  .role-card.primary p{color:#FFE1C2;}
+  .role-card .icon{font-size:28px;}
+  .role-card h3{font-size:19px; margin-bottom:2px;}
+  .role-card.primary h3{color:#fff;}
+
+  .feature-row{display:flex; gap:28px; flex-wrap:wrap; padding-top:30px; border-top:1px solid var(--line);}
+  .feature-row .item{display:flex; align-items:flex-start; gap:10px; max-width:210px; font-size:14px; color:var(--ink-soft);}
+  .feature-row .item span.i{font-size:19px;}
+
+  /* login panel (overlay) */
+  .overlay{position:fixed; inset:0; background:rgba(15,25,23,.45); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;}
+  .overlay.active{display:flex;}
+  .modal{background:#fff; border-radius:16px; padding:30px; width:100%; max-width:420px;}
+  .modal h2{font-size:22px;}
+  .modal .field{margin-bottom:14px;}
+  .modal label{display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-bottom:6px;}
+  .modal input, .modal select{width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line); font-size:15px; font-family:inherit;}
+  .modal-actions{display:flex; gap:10px; margin-top:20px;}
+  .demo-note{font-size:12.5px; color:var(--grey); background:var(--grey-bg); padding:9px 12px; border-radius:8px; margin-top:14px;}
+  .verify-line{display:flex; gap:8px; align-items:center; font-size:13.5px; color:var(--green); margin-top:4px;}
+
+  /* =========================================================
+     KIOSK — shared frame
+     ========================================================= */
+  .kiosk-frame{min-height:100vh; background:linear-gradient(180deg,#FFFFFF, #F2F2F2); display:flex; flex-direction:column; align-items:center; padding:26px 18px 50px;}
+  .kiosk-topbar{width:100%; max-width:760px; display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;}
+  .kiosk-brand{font-family:var(--font-serif); font-weight:700; color:var(--teal-900); font-size:19px;}
+  .lang-toggle{display:flex; gap:6px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px;}
+  .lang-toggle button{border:none; background:transparent; padding:7px 14px; border-radius:999px; font-size:14px; font-weight:700; color:var(--ink-soft);}
+  .lang-toggle button.active{background:var(--teal-700); color:#fff;}
+
+  .progress-track{width:100%; max-width:760px; display:flex; align-items:center; margin-bottom:26px;}
+  .progress-step{flex:1; display:flex; flex-direction:column; align-items:center; position:relative;}
+  .progress-step .dot{width:30px; height:30px; border-radius:50%; background:#fff; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--ink-soft); z-index:2;}
+  .progress-step.done .dot{background:var(--teal-700); border-color:var(--teal-700); color:#fff;}
+  .progress-step.current .dot{border-color:var(--teal-700); color:var(--teal-700);}
+  .progress-step .label{font-size:12px; margin-top:6px; color:var(--ink-soft); text-align:center;}
+  .progress-step::before{content:""; position:absolute; top:15px; left:-50%; width:100%; height:2px; background:var(--line); z-index:1;}
+  .progress-step:first-child::before{display:none;}
+  .progress-step.done::before{background:var(--teal-700);}
+
+  .kiosk-card{width:100%; max-width:760px; background:#fff; border-radius:var(--radius-kiosk); padding:44px 40px; box-shadow:0 1px 3px rgba(20,40,35,.06);}
+  .kiosk-card h1{font-size:32px; margin-bottom:10px;}
+  .kiosk-card .sub{font-size:17px; color:var(--ink-soft); margin-bottom:26px;}
+  .big-btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:18px 0;}
+  .big-btn{background:var(--teal-100); border:2px solid transparent; border-radius:18px; padding:26px 18px; font-size:20px; font-weight:700; color:var(--teal-900); text-align:center;}
+  .big-btn:hover{border-color:var(--teal-600);}
+  .big-btn.selected{border-color:var(--teal-700); background:#fff; box-shadow:0 0 0 2px var(--teal-700) inset;}
+  .big-btn .emoji{display:block; font-size:34px; margin-bottom:8px;}
+
+  .readaloud-fab{display:inline-flex; align-items:center; gap:8px; background:#fff; border:1.5px solid var(--teal-500,var(--teal-600)); color:var(--teal-700); padding:10px 18px; border-radius:999px; font-weight:700; font-size:15px; margin-bottom:20px;}
+  .readaloud-fab.speaking{background:var(--teal-700); color:#fff;}
+
+  .kiosk-actions{display:flex; justify-content:space-between; margin-top:30px; gap:12px;}
+  .kiosk-actions .btn{font-size:17px; padding:15px 26px;}
+
+  .id-card{background:var(--teal-100); border-radius:16px; padding:20px 22px; margin:18px 0; display:grid; grid-template-columns:1fr 1fr; gap:14px 20px;}
+  .id-card .f-label{font-size:12.5px; color:var(--teal-700); font-weight:700; text-transform:uppercase; letter-spacing:.03em; display:block; margin-bottom:6px;}
+  .id-card .f-val{font-size:17px; font-weight:700; color:var(--ink);}
+  .id-input{width:100%; padding:12px 14px; font-size:16px; border-radius:10px; border:1.5px solid var(--line); font-family:inherit; background:#fff;}
+  .id-input:focus{outline:none; border-color:var(--teal-600);}
+
+  .option-list{display:flex; flex-direction:column; gap:12px; margin:18px 0;}
+  .option-row{display:flex; align-items:center; gap:14px; border:2px solid var(--line); border-radius:14px; padding:16px 18px; font-size:17px; font-weight:600;}
+  .option-row:hover{border-color:var(--teal-500,var(--teal-600));}
+  .option-row.selected{border-color:var(--teal-700); background:var(--teal-100);}
+  .option-row .emoji{font-size:22px;}
+
+  .consent-box{background:var(--grey-bg); border-radius:14px; padding:18px 20px; margin:18px 0; display:flex; gap:12px; align-items:flex-start;}
+  .consent-box input{width:22px; height:22px; margin-top:2px;}
+  .protect-line{display:flex; gap:8px; align-items:center; font-size:14.5px; color:var(--green); margin-top:16px;}
+
+  /* chat */
+  .chat-window{background:var(--bg); border-radius:16px; padding:20px; min-height:280px; margin:18px 0; display:flex; flex-direction:column; gap:14px; max-height:360px; overflow-y:auto;}
+  .msg{max-width:80%; padding:12px 16px; border-radius:14px; font-size:16px; line-height:1.4;}
+  .msg.ai{background:#fff; border:1px solid var(--line); align-self:flex-start; border-bottom-left-radius:4px;}
+  .msg.patient{background:var(--teal-700); color:#fff; align-self:flex-end; border-bottom-right-radius:4px;}
+  .mic-row{display:flex; flex-direction:column; align-items:center; gap:10px; margin:16px 0;}
+  .mic-btn{width:84px; height:84px; border-radius:50%; background:var(--red); color:#fff; border:none; font-size:30px; box-shadow:0 4px 14px rgba(168,58,45,.35);}
+  .mic-btn.listening{animation:pulse 1s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(168,58,45,.5);}70%{box-shadow:0 0 0 18px rgba(168,58,45,0);}100%{box-shadow:0 0 0 0 rgba(168,58,45,0);}}
+  .mic-hint{font-size:14px; color:var(--ink-soft); font-weight:600;}
+  .quick-replies{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .quick-replies .big-btn{padding:14px 18px; font-size:15.5px; border-radius:12px;}
+
+  .redflag-banner{background:var(--red-bg); border:1.5px solid var(--red); color:var(--red); border-radius:14px; padding:16px 18px; margin:16px 0; font-weight:700; display:flex; gap:10px; align-items:center;}
+
+  /* document upload */
+  .upload-zone{border:2px dashed var(--teal-400); border-radius:16px; padding:34px; text-align:center; margin:18px 0; background:var(--teal-100);}
+  .upload-zone .emoji{font-size:38px;}
+  .doc-type-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0;}
+  .doc-type-chip{border:2px solid var(--line); border-radius:12px; padding:12px 8px; text-align:center; font-size:13.5px; font-weight:600;}
+  .doc-type-chip.selected{border-color:var(--teal-700); background:var(--teal-100);}
+  .scan-progress{margin:20px 0;}
+  .scan-bar-track{height:10px; background:var(--line); border-radius:6px; overflow:hidden;}
+  .scan-bar-fill{height:100%; background:var(--teal-600); width:0%; transition:width .25s linear;}
+  .scan-status{font-size:14.5px; color:var(--ink-soft); margin-top:8px; font-weight:600;}
+  .extract-card{background:var(--bg); border-radius:14px; padding:18px 20px; margin:16px 0;}
+  .extract-row{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:15px;}
+  .extract-row:last-child{border-bottom:none;}
+  .extract-row b{color:var(--ink);}
+  .confidence-tag{font-size:12px; padding:2px 8px; border-radius:999px;}
+
+  /* timeline (kiosk + doctor share style) */
+  .timeline{position:relative; margin:20px 0; padding-left:26px;}
+  .timeline::before{content:""; position:absolute; left:8px; top:6px; bottom:6px; width:2px; background:var(--line);}
+  .tl-event{position:relative; margin-bottom:20px;}
+  .tl-event::before{content:""; position:absolute; left:-26px; top:4px; width:14px; height:14px; border-radius:50%; background:var(--teal-700); border:3px solid #fff; box-shadow:0 0 0 1px var(--line);}
+  .tl-year{font-family:var(--font-serif); font-weight:700; color:var(--teal-900); font-size:16px;}
+  .tl-card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-top:6px;}
+  .tl-card .tl-title{font-weight:700; font-size:15px;}
+  .tl-card .tl-meta{font-size:13px; color:var(--ink-soft); margin-top:2px;}
+
+  .summary-block{background:var(--bg); border-radius:14px; padding:18px 20px; margin-bottom:14px;}
+  .summary-block h3{font-size:16px; margin-bottom:8px;}
+  .summary-block ul{margin:0; padding-left:20px; font-size:15px; color:var(--ink);}
+  .ai-disclaimer{background:var(--amber-bg); color:var(--amber); border-radius:12px; padding:12px 16px; font-size:13.5px; font-weight:600; margin-top:10px;}
+
+  .done-check{width:90px; height:90px; border-radius:50%; background:var(--green-bg); color:var(--green); display:flex; align-items:center; justify-content:center; font-size:46px; margin:0 auto 20px;}
+
+  /* =========================================================
+     DASHBOARD SHELL (staff + doctor)
+     ========================================================= */
+  .dash{display:flex; min-height:100vh;}
+  .sidebar{width:230px; background:var(--teal-900); color:#F2F2F2; padding:24px 18px; display:flex; flex-direction:column; gap:6px;}
+  .sidebar .brand{color:#fff; margin-bottom:26px;}
+  .sidebar .brand .mark{background:#fff; color:var(--teal-900);}
+  .sidebar .nav-item{padding:10px 12px; border-radius:8px; font-size:14.5px; font-weight:600; color:#D9D9D9; display:flex; gap:10px; align-items:center;}
+  .sidebar .nav-item.active{background:rgba(255,255,255,.12); color:#fff;}
+  .sidebar .who{margin-top:auto; padding-top:16px; border-top:1px solid rgba(255,255,255,.15); font-size:13px; color:#BFBFBF;}
+  .sidebar .who .name{color:#fff; font-weight:700; font-size:14.5px;}
+  .sidebar .exit-btn{margin-top:12px; font-size:13px; color:#D9D9D9; background:rgba(255,255,255,.08); border:none; border-radius:8px; padding:8px 10px; text-align:left;}
+
+  .main{flex:1; padding:28px 34px; max-width:100%; overflow-x:hidden;}
+  .main-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:22px;}
+  .main-header h1{font-size:24px;}
+  .search-bar{display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 14px; width:320px;}
+  .search-bar input{border:none; outline:none; font-size:14.5px; width:100%; font-family:inherit;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:24px;}
+  .stat-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-card); padding:16px; border-left:3px solid var(--teal-600);}
+  .stat-card .n{font-family:var(--font-serif); font-size:26px; font-weight:700;}
+  .stat-card .l{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .stat-card.red{border-left-color:var(--red);}
+  .stat-card.amber{border-left-color:var(--amber);}
+  .stat-card.yellow{border-left-color:var(--yellow);}
+  .stat-card.green{border-left-color:var(--green);}
+
+  table{width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-card); overflow:hidden;}
+  thead th{text-align:left; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-soft); padding:12px 14px; background:var(--bg); border-bottom:1px solid var(--line);}
+  tbody td{padding:13px 14px; font-size:14.5px; border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--teal-100);}
+  .demo-flag{display:inline-block; background:var(--grey-bg); color:var(--grey); font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:6px; margin-bottom:14px;}
+
+  /* case view */
+  .case-top{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;}
+  .case-name{font-family:var(--font-serif); font-size:22px; font-weight:700;}
+  .case-meta{font-size:14px; color:var(--ink-soft); margin-top:4px;}
+  .case-layout{display:grid; grid-template-columns:1fr 260px; gap:20px;}
+  .tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:18px; flex-wrap:wrap;}
+  .tab{padding:10px 14px; font-size:14px; font-weight:600; color:var(--ink-soft); border-bottom:2px solid transparent;}
+  .tab.active{color:var(--teal-700); border-bottom-color:var(--teal-700);}
+  .tab-panel{display:none; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px;}
+  .tab-panel.active{display:block;}
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 24px;}
+  .field-grid .fi label{display:block; font-size:12px; color:var(--ink-soft); font-weight:700; text-transform:uppercase; margin-bottom:4px;}
+  .field-grid .fi .v{font-size:15px;}
+  .alerts-panel{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:18px; height:fit-content;}
+  .alert-item{display:flex; gap:8px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .alert-item:last-child{border-bottom:none;}
+  .verify-actions{display:flex; gap:8px; margin-top:16px;}
+
+  .empty-state{text-align:center; padding:50px 20px; color:var(--ink-soft);}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr;}
+    .role-grid{grid-template-columns:1fr;}
+    .stat-grid{grid-template-columns:repeat(3,1fr);}
+    .case-layout{grid-template-columns:1fr;}
+    .dash{flex-direction:column;}
+    .sidebar{width:100%; flex-direction:row; overflow-x:auto; align-items:center;}
+    .sidebar .who,.sidebar .exit-btn{display:none;}
+    .main{padding:18px;}
+    .kiosk-card{padding:26px 20px;}
+    .big-btn-grid{grid-template-columns:1fr;}
+    .doc-type-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     LANDING PAGE
+========================================================= -->
+<section id="screen-landing" class="screen active">
+  <div class="wrap">
+    <div class="landing-top">
+      <div class="brand"><span class="mark">M</span> MediChrono</div>
+      <span class="demo-pill">Prototype • Demo data only</span>
+    </div>
+
+    <div class="hero">
+      <div>
+        <h1>Every patient's story, one intelligent intake.</h1>
+        <p class="lede">MediChrono collects a patient's medical history and previous records before they meet the doctor — in their own language, at their own pace — so a five-minute OPD visit can start with the full picture.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="openLogin('patient')">🧑‍🤝‍🧑 Patient login / Start kiosk</button>
+          <button class="btn btn-outline" onclick="openLogin('doctor')">🩺 Doctor login</button>
+          <button class="btn btn-outline" onclick="openLogin('staff')">🧑‍💼 Staff / Triage login</button>
+        </div>
+        <button class="read-aloud-btn" style="margin-top:18px;" onclick="speak(landingText(),'en')">🔊 Read this page aloud</button>
+      </div>
+      <div class="hero-panel">
+        <div class="stat"><span>Patients intaked today</span><b>18</b></div>
+        <div class="stat"><span>Red-flag alerts open</span><b>2</b></div>
+        <div class="stat"><span>Avg. intake time</span><b>6.5 min</b></div>
+        <div class="stat"><span>Languages supported</span><b>हिन्दी / English</b></div>
+      </div>
+    </div>
+
+    <div class="role-grid">
+      <div class="role-card primary">
+        <span class="icon">🧑‍🤝‍🧑</span>
+        <h3>Patient kiosk</h3>
+        <p>Give your history by voice or touch, upload old prescriptions and reports, and arrive at the doctor already understood.</p>
+        <button class="btn btn-block" style="background:#fff;color:var(--teal-900);margin-top:auto;" onclick="openLogin('patient')">Start intake</button>
+      </div>
+      <div class="role-card">
+        <span class="icon">🩺</span>
+        <h3>Doctor dashboard</h3>
+        <p>Review AI-organised histories, timelines and summaries — verify before every clinical decision.</p>
+        <button class="btn btn-outline btn-block" style="margin-top:auto;" onclick="openLogin('doctor')">Doctor login</button>
+      </div>
+      <div class="role-card">
+        <span class="icon">🧑‍💼</span>
+        <h3>Triage / staff</h3>
+        <p>Track who's mid-intake, who's done, and who needs urgent attention.</p>
+        <button class="btn btn-outline btn-block" style="margin-top:auto;" onclick="openLogin('staff')">Staff login</button>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:34px;">
+      <button class="btn btn-ghost" onclick="openLogin('demo')">▶️ View demo mode — jump into any screen</button>
+    </div>
+
+    <div class="feature-row">
+      <div class="item"><span class="i">🗣️</span> Voice & touch intake in Hindi and English</div>
+      <div class="item"><span class="i">📄</span> Smart scanning of prescriptions & reports</div>
+      <div class="item"><span class="i">🕒</span> Automatic chronological medical timeline</div>
+      <div class="item"><span class="i">🤖</span> AI-assisted summary — doctor verifies every case</div>
+      <div class="item"><span class="i">🔐</span> Consent-based, role-restricted access</div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGIN OVERLAY -->
+<div class="overlay" id="loginOverlay">
+  <div class="modal" id="loginModalBody"></div>
+</div>
+
+<!-- =========================================================
+     PATIENT KIOSK SCREENS
+========================================================= -->
+
+<!-- Welcome -->
+<section id="screen-welcome" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar">
+      <div class="kiosk-brand">MediChrono</div>
+      <div class="lang-toggle">
+        <button id="lang-hi" onclick="setLang('hi')">हिन्दी</button>
+        <button id="lang-te" onclick="setLang('te')">తెలుగు</button>
+        <button id="lang-en" class="active" onclick="setLang('en')">English</button>
+      </div>
+    </div>
+    <div class="kiosk-card" style="text-align:center;">
+      <button class="readaloud-fab" id="ra-welcome" onclick="toggleSpeak('ra-welcome', welcomeText())">🔊 Read aloud</button>
+      <h1 id="w-title">MediChrono</h1>
+      <div class="sub" id="w-sub">AI-powered clinical intake</div>
+      <p id="w-body" style="font-size:17px;max-width:32em;margin:0 auto 24px;">Welcome. MediChrono helps collect your medical history and previous medical records before you meet the doctor.</p>
+      <button class="btn btn-primary" style="font-size:19px;padding:18px 40px;" onclick="goTo('screen-identify')" id="w-start">Start</button>
+    </div>
+  </div>
+</section>
+
+<!-- Identification -->
+<section id="screen-identify" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track"></div>
+    <div class="kiosk-card">
+      <button class="readaloud-fab" id="ra-identify" onclick="toggleSpeak('ra-identify', 'Identify yourself. Enter your A B H A I D, scan your A B H A Q R code, or continue as a new patient.')">🔊 Read aloud</button>
+      <h1>Identify yourself</h1>
+      <div class="option-list">
+        <div class="option-row" data-id="abha" onclick="selectId('abha')"><span class="emoji">🪪</span> Enter ABHA ID</div>
+        <div class="option-row" data-id="qr" onclick="selectId('qr')"><span class="emoji">📷</span> Scan ABHA QR</div>
+        <div class="option-row selected" data-id="new" onclick="selectId('new')"><span class="emoji">🆕</span> New patient (demo)</div>
+      </div>
+      <div class="sub" style="margin-top:18px;">Please type your details below</div>
+      <div class="id-card" style="background:var(--bg);border:1px solid var(--line);">
+        <div>
+          <label class="f-label" for="inpName">Patient name</label>
+          <input id="inpName" type="text" class="id-input" placeholder="Type full name">
+        </div>
+        <div>
+          <label class="f-label" for="inpAge">Age</label>
+          <input id="inpAge" type="number" min="0" max="120" class="id-input" placeholder="Age">
+        </div>
+        <div>
+          <label class="f-label" for="inpGender">Gender</label>
+          <select id="inpGender" class="id-input">
+            <option value="">Select</option>
+            <option>Female</option>
+            <option>Male</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="f-label" for="inpPhone">Phone number</label>
+          <input id="inpPhone" type="tel" class="id-input" placeholder="10-digit mobile number" maxlength="10">
+        </div>
+        <div>
+          <div class="f-label">Token number</div>
+          <div class="f-val" id="tokenVal">A-108</div>
+        </div>
+      </div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-welcome')">Back</button>
+        <button class="btn btn-primary" onclick="checkIdentifyAndContinue()">Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Consent -->
+<section id="screen-consent" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track2"></div>
+    <div class="kiosk-card">
+      <button class="readaloud-fab" id="ra-consent" onclick="toggleSpeak('ra-consent', 'Before we begin. We will collect information about your health and previous medical records so your doctor can understand your history more quickly. Your information is protected.')">🔊 Audio explanation</button>
+      <h1>Before we begin</h1>
+      <p style="font-size:17px;">We will collect information about your health and previous medical records so your doctor can understand your history more quickly.</p>
+      <div class="consent-box">
+        <input type="checkbox" id="consentCheck">
+        <label for="consentCheck" style="font-size:16px;font-weight:600;">I understand and agree to share my medical information with my treating doctor for this visit.</label>
+      </div>
+      <div class="protect-line">🔒 Your information is protected and only shared with your treating team.</div>
+      <div class="kiosk-actions">
+        <button class="btn btn-danger-outline" onclick="alert('Consent declined. A staff member will assist you directly.')">Decline</button>
+        <button class="btn btn-primary" id="consentContinue" disabled onclick="goTo('screen-consult-type')">Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Consultation type -->
+<section id="screen-consult-type" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track3"></div>
+    <div class="kiosk-card">
+      <button class="readaloud-fab" id="ra-ctype" onclick="toggleSpeak('ra-ctype','What kind of consultation do you need today? General medicine, surgery, paediatrics, or Ayurveda.')">🔊 Read aloud</button>
+      <h1>What brings you in today?</h1>
+      <div class="sub">Choose the department for your visit</div>
+      <div class="big-btn-grid">
+        <div class="big-btn" data-c="general" onclick="selectConsult('general')"><span class="emoji">🩺</span>General Medicine</div>
+        <div class="big-btn" data-c="surgery" onclick="selectConsult('surgery')"><span class="emoji">🔪</span>Surgery</div>
+        <div class="big-btn" data-c="paed" onclick="selectConsult('paed')"><span class="emoji">🧒</span>Paediatrics</div>
+        <div class="big-btn" data-c="ayush" onclick="selectConsult('ayush')"><span class="emoji">🌿</span>Ayurveda / AYUSH</div>
+      </div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-consent')">Back</button>
+        <button class="btn btn-primary" onclick="goTo('screen-chat')">Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI conversational history -->
+<section id="screen-chat" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track4"></div>
+    <div class="kiosk-card">
+      <div class="sub" style="margin-bottom:8px;">🤖 AI history assistant</div>
+      <div id="redflagBanner" class="redflag-banner" style="display:none;">🚩 Red flag detected — chest pain reported. Triage staff has been notified for priority review.</div>
+      <div class="chat-window" id="chatWindow"></div>
+      <div class="mic-row">
+        <button class="mic-btn" id="micBtn" onclick="tapToSpeak()">🎤</button>
+        <div class="mic-hint" id="micHint">Tap to speak</div>
+      </div>
+      <div class="quick-replies" id="quickReplies"></div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-consult-type')">Back</button>
+        <button class="btn btn-primary" id="chatContinueBtn" onclick="goTo('screen-documents')">Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Document upload -->
+<section id="screen-documents" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track5"></div>
+    <div class="kiosk-card">
+      <button class="readaloud-fab" id="ra-docs" onclick="toggleSpeak('ra-docs','Do you have any old prescriptions, lab reports, or discharge summaries? Please scan or upload them now, or skip this step.')">🔊 Read aloud</button>
+      <h1>Do you have old medical records?</h1>
+      <div class="sub">Prescriptions, lab reports, discharge summaries — upload or scan them</div>
+      <div class="doc-type-grid">
+        <div class="doc-type-chip selected" data-t="prescription" onclick="selectDocType('prescription')">💊 Prescription</div>
+        <div class="doc-type-chip" data-t="lab" onclick="selectDocType('lab')">🧪 Lab report</div>
+        <div class="doc-type-chip" data-t="discharge" onclick="selectDocType('discharge')">🏥 Discharge summary</div>
+        <div class="doc-type-chip" data-t="other" onclick="selectDocType('other')">📁 Other record</div>
+      </div>
+      <div class="upload-zone">
+        <div class="emoji">📷</div>
+        <p style="margin:10px 0 16px;">Scan with the kiosk camera or upload a photo/PDF</p>
+        <button class="btn btn-primary" onclick="startScan()">📤 Simulate scan / upload</button>
+      </div>
+      <div id="uploadedList"></div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-chat')">Back</button>
+        <button class="btn btn-primary" onclick="buildTimeline(); goTo('screen-timeline')">Continue</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OCR scanning overlay screen (shown within documents flow) -->
+<div class="overlay" id="scanOverlay">
+  <div class="modal" style="max-width:480px;">
+    <h2 id="scanTitle">Scanning document…</h2>
+    <div class="scan-progress">
+      <div class="scan-bar-track"><div class="scan-bar-fill" id="scanBarFill"></div></div>
+      <div class="scan-status" id="scanStatus">Reading document…</div>
+    </div>
+    <div id="scanResultArea" style="display:none;">
+      <div class="extract-card" id="extractCard"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="rejectScan()">Reject</button>
+        <button class="btn btn-outline btn-sm" onclick="editScan()">Edit</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmScan()">Confirm & add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Timeline -->
+<section id="screen-timeline" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track6"></div>
+    <div class="kiosk-card">
+      <button class="readaloud-fab" id="ra-tl" onclick="toggleSpeak('ra-tl','Here is what we found in your records, organised by date. Please confirm this looks correct.')">🔊 Read aloud</button>
+      <h1>Your medical timeline</h1>
+      <div class="sub">Please check this looks right before we send it to the doctor</div>
+      <div class="timeline" id="kioskTimeline"></div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-documents')">Back</button>
+        <button class="btn btn-primary" onclick="goTo('screen-summary')">This looks correct</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Summary -->
+<section id="screen-summary" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-topbar"><div class="kiosk-brand">MediChrono</div><div></div></div>
+    <div class="progress-track" id="progress-track7"></div>
+    <div class="kiosk-card">
+      <h1>Clinical summary</h1>
+      <div class="sub">This will be sent to your doctor before your consultation</div>
+      <div class="summary-block">
+        <h3>AI-identified condition / disease</h3>
+        <ul><li id="sumCondition">Waiting for patient history or medical-record input…</li></ul>
+        <div id="sumConditionSource" style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;"></div>
+      </div>
+      <div class="summary-block">
+        <h3>Chief complaint</h3>
+        <ul><li id="sumComplaint">Waiting for patient input…</li></ul>
+      </div>
+      <div class="summary-block">
+        <h3>History collected today</h3>
+        <ul id="sumHistory"><li>History will be generated from the patient's answers.</li></ul>
+      </div>
+      <div class="summary-block">
+        <h3>Documents reviewed</h3>
+        <ul id="sumDocs"><li>No documents uploaded yet</li></ul>
+      </div>
+      <div class="ai-disclaimer">🤖 AI-assisted summary — a doctor will verify every item before any clinical decision. MediChrono does not diagnose or prescribe.</div>
+      <div class="kiosk-actions">
+        <button class="btn btn-ghost" onclick="goTo('screen-timeline')">Back</button>
+        <button class="btn btn-primary" onclick="goTo('screen-done')">Send to doctor</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Done -->
+<section id="screen-done" class="screen">
+  <div class="kiosk-frame">
+    <div class="kiosk-card" style="text-align:center;margin-top:60px;">
+      <div class="done-check">✓</div>
+      <h1 id="doneName">You're all set</h1>
+      <p style="font-size:17px;max-width:30em;margin:0 auto 26px;">Your information has been sent to your doctor. Please take a seat — your token number <b id="doneToken">A-108</b> will be called shortly.</p>
+      <button class="btn btn-primary" onclick="goTo('screen-landing')">Finish</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     STAFF / TRIAGE DASHBOARD
+========================================================= -->
+<section id="screen-staff" class="screen">
+  <div class="dash">
+    <div class="sidebar">
+      <div class="brand"><span class="mark">M</span>MediChrono</div>
+      <div class="nav-item active">📋 Intake queue</div>
+      <div class="nav-item">🚩 Red-flag alerts</div>
+      <div class="nav-item">✅ Completed today</div>
+      <div class="who"><div class="name">Meena Rao</div>Triage staff • Ward 2</div>
+      <button class="exit-btn" onclick="goTo('screen-landing')">← Exit to landing</button>
+    </div>
+    <div class="main">
+      <span class="demo-flag">DEMO DATA — not real patient information</span>
+      <div class="main-header">
+        <h1>Intake queue</h1>
+      </div>
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card"><div class="n">7</div><div class="l">Currently in kiosk</div></div>
+        <div class="stat-card red"><div class="n">2</div><div class="l">Red-flag alerts</div></div>
+        <div class="stat-card green"><div class="n">14</div><div class="l">Completed today</div></div>
+        <div class="stat-card amber"><div class="n">3</div><div class="l">Awaiting doctor review</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Token</th><th>Patient</th><th>Status</th><th>Step</th><th>Priority</th></tr></thead>
+        <tbody id="staffTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     DOCTOR DASHBOARD
+========================================================= -->
+<section id="screen-doctor" class="screen">
+  <div class="dash">
+    <div class="sidebar">
+      <div class="brand"><span class="mark">M</span>MediChrono</div>
+      <div class="nav-item active" onclick="goTo('screen-doctor')">👥 Patient queue</div>
+      <div class="nav-item">📄 New documents</div>
+      <div class="nav-item">🤖 AI summaries</div>
+      <div class="who"><div class="name">Dr. A. Sharma</div>General Medicine • Demo Verified ✓</div>
+      <button class="exit-btn" onclick="goTo('screen-landing')">← Exit to landing</button>
+    </div>
+    <div class="main">
+      <span class="demo-flag">DEMO DATA — not real patient information</span>
+      <div class="main-header">
+        <h1>Patient queue</h1>
+        <div class="search-bar">🔎 <input placeholder="Search by patient ID, name or phone"></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="n">6</div><div class="l">Total patients</div></div>
+        <div class="stat-card red"><div class="n">1</div><div class="l">High priority</div></div>
+        <div class="stat-card amber"><div class="n">1</div><div class="l">Needs review</div></div>
+        <div class="stat-card yellow"><div class="n">1</div><div class="l">Monitoring</div></div>
+        <div class="stat-card green"><div class="n">3</div><div class="l">Routine</div></div>
+        <div class="stat-card"><div class="n">4</div><div class="l">AI summaries ready</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Patient ID</th><th>Name</th><th>Age</th><th>Dept.</th><th>Chief complaint</th><th>Priority</th><th>Last visit</th><th></th></tr></thead>
+        <tbody id="doctorTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Doctor case view -->
+<section id="screen-case" class="screen">
+  <div class="dash">
+    <div class="sidebar">
+      <div class="brand"><span class="mark">M</span>MediChrono</div>
+      <div class="nav-item" onclick="goTo('screen-doctor')">← Back to queue</div>
+      <div class="who"><div class="name">Dr. A. Sharma</div>General Medicine • Demo Verified ✓</div>
+      <button class="exit-btn" onclick="goTo('screen-landing')">← Exit to landing</button>
+    </div>
+    <div class="main">
+      <span class="demo-flag">DEMO DATA — not real patient information</span>
+      <div class="case-top">
+        <div>
+          <div class="case-name" id="caseName">—</div>
+          <div class="case-meta" id="caseMeta">—</div>
+        </div>
+        <span class="badge" id="casePriorityBadge">—</span>
+      </div>
+      <div class="case-layout">
+        <div>
+          <div class="tabs" id="caseTabs"></div>
+          <div id="caseTabPanels"></div>
+        </div>
+        <div class="alerts-panel">
+          <h3 style="font-size:15px;">⚠️ Important alerts</h3>
+          <div id="caseAlerts"></div>
+          <div class="verify-actions">
+            <button class="btn btn-primary btn-sm btn-block" onclick="verifyCase()">✓ Verify summary</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* =========================================================
+   STATE & DEMO DATA
+========================================================= */
+const state = {
+  lang: 'en',
+  consultType: 'general',
+  chatStep: 0,
+  redFlag: false,
+  documents: [],
+  pendingDocType: 'prescription',
+  currentCaseId: null,
+  patient: {name:'', age:'', gender:'', phone:'', token:'A-108', complaint:''},
+  aiSummary: {condition:'', source:'', confidence:'Prototype inference'},
+};
+
+const strings = {
+  en: {
+    title:'MediChrono', sub:'AI-powered clinical intake',
+    body:'Welcome. MediChrono helps collect your medical history and previous medical records before you meet the doctor.',
+    start:'Start'
+  },
+  hi: {
+    title:'मेडीक्रोनो', sub:'एआई-संचालित क्लिनिकल इनटेक',
+    body:'स्वागत है। मेडीक्रोनो डॉक्टर से मिलने से पहले आपकी स्वास्थ्य जानकारी और पुराने मेडिकल रिकॉर्ड एकत्र करने में मदद करता है।',
+    start:'शुरू करें'
+  },
+  te: {
+    title:'మెడిక్రోనో', sub:'ఏఐ ఆధారిత క్లినికల్ ఇంటేక్',
+    body:'స్వాగతం. డాక్టర్‌ను కలవడానికి ముందు మీ ఆరోగ్య చరిత్ర మరియు పాత వైద్య రికార్డులను సేకరించడంలో మెడిక్రోనో సహాయపడుతుంది.',
+    start:'ప్రారంభించండి'
+  }
+};
+
+/* progress steps for the kiosk flow */
+const STEP_LABELS = ['Identify','History','Documents','Review','Complete'];
+function stepIndexForScreen(id){
+  return {
+    'screen-identify':0,'screen-consent':0,
+    'screen-consult-type':1,'screen-chat':1,
+    'screen-documents':2,
+    'screen-timeline':3,'screen-summary':3,
+    'screen-done':4
+  }[id];
+}
+function renderProgress(containerId, currentIdx){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = STEP_LABELS.map((label,i)=>{
+    let cls = 'progress-step';
+    if(i<currentIdx) cls+=' done';
+    else if(i===currentIdx) cls+=' current';
+    return `<div class="${cls}"><div class="dot">${i<currentIdx?'✓':(i+1)}</div><div class="label">${label}</div></div>`;
+  }).join('');
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  window.speechSynthesis && window.speechSynthesis.cancel();
+
+  const progressMap = {
+    'screen-identify':'progress-track','screen-consent':'progress-track2',
+    'screen-consult-type':'progress-track3','screen-chat':'progress-track4',
+    'screen-documents':'progress-track5','screen-timeline':'progress-track6',
+    'screen-summary':'progress-track7'
+  };
+  if(progressMap[id]) renderProgress(progressMap[id], stepIndexForScreen(id));
+
+  if(id==='screen-chat' && state.chatStep===0) startChat();
+  if(id==='screen-staff') renderStaffTable();
+  if(id==='screen-doctor') renderDoctorTable();
+  if(id==='screen-done'){
+    const p = state.patient;
+    document.getElementById('doneName').textContent = "You're all set" + (p.name ? ', '+p.name+' ji' : '');
+    document.getElementById('doneToken').textContent = p.token;
+  }
+}
+
+/* =========================================================
+   LOGIN OVERLAY (demo)
+========================================================= */
+function openLogin(role){
+  const overlay = document.getElementById('loginOverlay');
+  const body = document.getElementById('loginModalBody');
+  if(role==='patient'){
+    body.innerHTML = `
+      <h2>Patient login</h2>
+      <button class="btn btn-outline btn-block" onclick="googleLogin()">🟢 Continue with Google</button>
+      <div style="text-align:center;color:var(--ink-soft);font-size:13px;margin:16px 0;">or use your phone number</div>
+      <div class="field"><label>Phone number</label><input id="loginPhone" type="tel" placeholder="e.g. 9876543210" maxlength="10"></div>
+      <div id="otpArea"></div>
+      <div class="demo-note">DEMO LOGIN — for prototype demonstration only. Not a real authentication system.</div>
+      <div class="modal-actions" id="patientLoginActions">
+        <button class="btn btn-ghost" onclick="closeLogin()">Cancel</button>
+        <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOtp()">Send verification code</button>
+      </div>`;
+  } else if(role==='doctor'){
+    body.innerHTML = `
+      <h2>Doctor login</h2>
+      <div class="field"><label>Doctor ID</label><input value="DOC-2026-00042"></div>
+      <div class="field"><label>Name</label><input value="Dr. A. Sharma"></div>
+      <div class="verify-line">✓ Employment ID demo verified</div>
+      <div class="demo-note">DEMO LOGIN — for prototype demonstration only. Not a real authentication system.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeLogin()">Cancel</button>
+        <button class="btn btn-primary" onclick="closeLogin(); goTo('screen-doctor');">Go to dashboard</button>
+      </div>`;
+  } else if(role==='staff'){
+    body.innerHTML = `
+      <h2>Staff / triage login</h2>
+      <div class="field"><label>Staff ID</label><input value="STF-0091"></div>
+      <div class="field"><label>Name</label><input value="Meena Rao"></div>
+      <div class="verify-line">✓ Demo verified</div>
+      <div class="demo-note">DEMO LOGIN — for prototype demonstration only. Not a real authentication system.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeLogin()">Cancel</button>
+        <button class="btn btn-primary" onclick="closeLogin(); goTo('screen-staff');">Go to dashboard</button>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <h2>Demo mode</h2>
+      <p style="font-size:14.5px;">Jump straight into any interface with pre-filled demo data.</p>
+      <div class="modal-actions" style="flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="closeLogin(); goTo('screen-welcome');">Patient kiosk</button>
+        <button class="btn btn-outline btn-sm" onclick="closeLogin(); goTo('screen-doctor');">Doctor dashboard</button>
+        <button class="btn btn-outline btn-sm" onclick="closeLogin(); goTo('screen-staff');">Staff dashboard</button>
+      </div>`;
+  }
+  overlay.classList.add('active');
+}
+function closeLogin(){ document.getElementById('loginOverlay').classList.remove('active'); }
+
+function googleLogin(){
+  const body = document.getElementById('loginModalBody');
+  body.innerHTML = `
+    <h2>Continue with Google</h2>
+    <div style="border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div style="width:38px;height:38px;border-radius:50%;background:var(--teal-100);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--teal-700);">S</div>
+      <div><div style="font-weight:700;">Sunita Devi</div><div style="font-size:13px;color:var(--ink-soft);">sunita.devi54@gmail.com</div></div>
+    </div>
+    <div class="verify-line">✓ Demo Google sign-in verified</div>
+    <div class="demo-note">DEMO LOGIN — for prototype demonstration only. Not a real Google sign-in.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="openLogin('patient')">Back</button>
+      <button class="btn btn-primary" onclick="closeLogin(); goTo('screen-welcome');">Continue to kiosk</button>
+    </div>`;
+}
+function sendOtp(){
+  const phone = document.getElementById('loginPhone').value.trim();
+  if(phone.length!==10){ alert('Please enter a valid 10-digit phone number.'); return; }
+  document.getElementById('otpArea').innerHTML = `
+    <div class="field"><label>Enter the verification code sent to ${phone}</label><input id="loginOtp" type="tel" placeholder="4-digit code" maxlength="4"></div>
+    <div class="verify-line" id="otpVerifiedMsg" style="display:none;">✓ Phone number verified</div>`;
+  document.getElementById('sendOtpBtn').outerHTML = `<button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOtp()">Verify code</button>`;
+}
+function verifyOtp(){
+  const otp = document.getElementById('loginOtp').value.trim();
+  if(otp.length!==4){ alert('Please enter the 4-digit verification code. (Demo: any 4 digits work.)'); return; }
+  document.getElementById('otpVerifiedMsg').style.display='flex';
+  document.getElementById('verifyOtpBtn').outerHTML = `<button class="btn btn-primary" onclick="closeLogin(); goTo('screen-welcome');">Continue to kiosk</button>`;
+}
+
+/* =========================================================
+   AUDIO (Web Speech API) — Read aloud feature
+========================================================= */
+function speak(text, lang){
+  if(!('speechSynthesis' in window)){ alert('Audio not supported in this browser.'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const l = lang||state.lang;
+  u.lang = l==='hi' ? 'hi-IN' : l==='te' ? 'te-IN' : 'en-IN';
+  u.rate = 0.95;
+  window.speechSynthesis.speak(u);
+}
+function toggleSpeak(btnId, text){
+  const btn = document.getElementById(btnId);
+  if(window.speechSynthesis.speaking){
+    window.speechSynthesis.cancel();
+    document.querySelectorAll('.readaloud-fab').forEach(b=>b.classList.remove('speaking'));
+    return;
+  }
+  btn.classList.add('speaking');
+  speak(text, state.lang);
+  const u_check = setInterval(()=>{
+    if(!window.speechSynthesis.speaking){
+      btn.classList.remove('speaking');
+      clearInterval(u_check);
+    }
+  },300);
+}
+function landingText(){
+  return "MediChrono. Every patient's story, one intelligent intake. MediChrono collects a patient's medical history and previous records before they meet the doctor, in their own language, at their own pace. Choose patient login to start the kiosk, doctor login, or staff login.";
+}
+function welcomeText(){ return strings[state.lang].title+'. '+strings[state.lang].sub+'. '+strings[state.lang].body; }
+
+/* =========================================================
+   LANGUAGE TOGGLE
+========================================================= */
+function setLang(l){
+  state.lang = l;
+  document.getElementById('lang-hi').classList.toggle('active', l==='hi');
+  document.getElementById('lang-te').classList.toggle('active', l==='te');
+  document.getElementById('lang-en').classList.toggle('active', l==='en');
+  const s = strings[l];
+  document.getElementById('w-title').textContent = s.title;
+  document.getElementById('w-sub').textContent = s.sub;
+  document.getElementById('w-body').textContent = s.body;
+  document.getElementById('w-start').textContent = s.start;
+}
+
+/* =========================================================
+   IDENTIFICATION
+========================================================= */
+function selectId(id){
+  document.querySelectorAll('#screen-identify .option-row').forEach(r=>r.classList.remove('selected'));
+  document.querySelector(`#screen-identify .option-row[data-id="${id}"]`).classList.add('selected');
+}
+function checkIdentifyAndContinue(){
+  const name = document.getElementById('inpName').value.trim();
+  const age = document.getElementById('inpAge').value.trim();
+  const gender = document.getElementById('inpGender').value;
+  const phone = document.getElementById('inpPhone').value.trim();
+  if(!name || !age || !gender){
+    alert('Please type the patient name, age and gender to continue.');
+    return;
+  }
+  state.patient = {name, age, gender, phone, token: state.patient.token};
+  goTo('screen-consent');
+}
+
+/* =========================================================
+   CONSENT
+========================================================= */
+document.addEventListener('change', (e)=>{
+  if(e.target.id==='consentCheck'){
+    document.getElementById('consentContinue').disabled = !e.target.checked;
+  }
+});
+
+/* =========================================================
+   CONSULTATION TYPE
+========================================================= */
+function selectConsult(c){
+  state.consultType = c;
+  document.querySelectorAll('#screen-consult-type .big-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelector(`#screen-consult-type .big-btn[data-c="${c}"]`).classList.add('selected');
+}
+
+/* =========================================================
+   AI CONVERSATIONAL HISTORY (simulated)
+========================================================= */
+const CHAT_SCRIPT = [
+  {ai:"Hello. What brings you to the hospital today?", replies:[
+    {text:'Chest pain', flag:true, patient:'I have chest pain since yesterday.'},
+    {text:'Fever & cold', flag:false, patient:'I have had fever and a cold for two days.'},
+    {text:'Stomach pain', flag:false, patient:'I have stomach pain since this morning.'}
+  ]},
+  {ai:"I understand. On a scale of mild, moderate or severe, how would you describe it?", replies:[
+    {text:'Mild', patient:'It is mild.'},{text:'Moderate', patient:'It is moderate.'},{text:'Severe', patient:'It is quite severe.'}
+  ]},
+  {ai:"Have you had any similar problem before, or any ongoing illness like diabetes or blood pressure?", replies:[
+    {text:'No, this is new', patient:'No, this is new for me.'},
+    {text:'Yes, I have BP/diabetes', patient:'Yes, I have blood pressure problems.'}
+  ]},
+  {ai:"Thank you. Are you currently taking any medicines?", replies:[
+    {text:'No medicines', patient:'No, I am not taking any medicines.'},
+    {text:'Yes, regular medicines', patient:'Yes, I take medicines regularly.'}
+  ]},
+  {ai:"Thank you, that's very helpful. Let's move on to your previous medical documents.", replies:[]}
+];
+function startChat(){
+  state.chatStep = 0;
+  document.getElementById('chatWindow').innerHTML='';
+  document.getElementById('redflagBanner').style.display='none';
+  document.getElementById('chatContinueBtn').style.display='none';
+  askNext();
+}
+function addMsg(who, text){
+  const win = document.getElementById('chatWindow');
+  const div = document.createElement('div');
+  div.className = 'msg '+who;
+  div.textContent = text;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+function askNext(){
+  const step = CHAT_SCRIPT[state.chatStep];
+  if(!step) return;
+  addMsg('ai', step.ai);
+  speak(step.ai, state.lang);
+  const qr = document.getElementById('quickReplies');
+  qr.innerHTML = '';
+  if(step.replies.length===0){
+    document.getElementById('chatContinueBtn').style.display='inline-flex';
+    document.getElementById('micHint').textContent='History collected — tap Continue below';
+    return;
+  }
+  step.replies.forEach(r=>{
+    const b = document.createElement('div');
+    b.className='big-btn';
+    b.textContent=r.text;
+    b.onclick=()=>answerChat(r);
+    qr.appendChild(b);
+  });
+}
+function answerChat(r){
+  addMsg('patient', r.patient);
+
+  // The patient's selected/spoken complaint becomes the source for the AI summary.
+  if(state.chatStep === 0){
+    state.patient.complaint = r.patient;
+    state.aiSummary.condition = r.text;
+    state.aiSummary.source = 'Patient-reported history';
+    document.getElementById('sumComplaint').textContent = r.patient;
+
+    if(r.flag){
+      state.redFlag = true;
+      const banner = document.getElementById('redflagBanner');
+      banner.textContent = '🚩 Priority flag detected from the patient-reported history. Triage staff has been notified for review.';
+      banner.style.display='flex';
+    }
+    updateAISummary();
+  }
+
+  document.getElementById('quickReplies').innerHTML='';
+  state.chatStep++;
+  setTimeout(askNext, 500);
+}
+function tapToSpeak(){
+  const btn = document.getElementById('micBtn');
+  const hint = document.getElementById('micHint');
+  btn.classList.add('listening');
+  hint.textContent = 'Listening…';
+  setTimeout(()=>{
+    btn.classList.remove('listening');
+    hint.textContent = 'Tap to speak';
+    const step = CHAT_SCRIPT[state.chatStep];
+    if(step && step.replies.length){
+      answerChat(step.replies[0]); // simulate voice recognition picking the first likely answer
+    }
+  }, 1400);
+}
+
+/* =========================================================
+   DOCUMENT UPLOAD + MOCK OCR
+========================================================= */
+const DOC_TEMPLATES = {
+  prescription:{icon:'💊', extract:{'Document type':'Prescription','Patient name':'Sunita Devi','Hospital':'City Govt. Hospital','Doctor':'Dr. R. Verma','Date':'14 Mar 2025','Diagnosis':'Hypertension','Medicines':'Amlodipine 5mg, once daily'}},
+  lab:{icon:'🧪', extract:{'Document type':'Lab report','Patient name':'Sunita Devi','Hospital':'City Diagnostics Lab','Date':'02 Jul 2025','Test':'Fasting Blood Sugar','Result':'118 mg/dL (borderline)'}},
+  discharge:{icon:'🏥', extract:{'Document type':'Discharge summary','Patient name':'Sunita Devi','Hospital':'District Hospital','Date':'21 Nov 2023','Diagnosis':'Gall bladder surgery (cholecystectomy)','Follow-up':'6-month review advised'}},
+  other:{icon:'📁', extract:{'Document type':'Medical record','Patient name':'Sunita Devi','Date':'—','Notes':'General record — details to be confirmed'}}
+};
+function selectDocType(t){
+  state.pendingDocType = t;
+  document.querySelectorAll('.doc-type-chip').forEach(c=>c.classList.remove('selected'));
+  document.querySelector(`.doc-type-chip[data-t="${t}"]`).classList.add('selected');
+}
+function startScan(){
+  const overlay = document.getElementById('scanOverlay');
+  const fill = document.getElementById('scanBarFill');
+  const status = document.getElementById('scanStatus');
+  document.getElementById('scanResultArea').style.display='none';
+  document.getElementById('scanTitle').textContent='Scanning document…';
+  fill.style.width='0%';
+  overlay.classList.add('active');
+  const statuses = ['Reading document…','Detecting text (OCR)…','Extracting medical fields…','Matching known formats…'];
+  let pct=0, si=0;
+  status.textContent = statuses[0];
+  const timer = setInterval(()=>{
+    pct += 12;
+    fill.style.width = Math.min(pct,100)+'%';
+    if(pct % 25 < 12) { si=(si+1)%statuses.length; status.textContent = statuses[si]; }
+    if(pct>=100){
+      clearInterval(timer);
+      finishScan();
+    }
+  },220);
+}
+function finishScan(){
+  document.getElementById('scanTitle').textContent='Document successfully scanned ✓';
+  document.getElementById('scanStatus').textContent='Please verify the extracted information below.';
+  const tmpl = DOC_TEMPLATES[state.pendingDocType];
+  const card = document.getElementById('extractCard');
+  card.innerHTML = Object.entries(tmpl.extract).map(([k,v])=>`
+    <div class="extract-row"><span>${k}</span><b>${v} <span class="confidence-tag badge-green" style="background:var(--green-bg);color:var(--green);">${90+Math.floor(Math.random()*8)}% match</span></b></div>
+  `).join('');
+  document.getElementById('scanResultArea').style.display='block';
+}
+function rejectScan(){ document.getElementById('scanOverlay').classList.remove('active'); }
+function editScan(){ alert('Edit mode: fields become editable text inputs in the full build. (Demo)'); }
+function confirmScan(){
+  const tmpl = DOC_TEMPLATES[state.pendingDocType];
+  state.documents.push({type:state.pendingDocType, icon:tmpl.icon, data:tmpl.extract});
+
+  // If the scanned record contains a diagnosis, use that actual record value
+  // in the AI summary instead of a hard-coded disease.
+  if(tmpl.extract['Diagnosis']){
+    state.aiSummary.condition = tmpl.extract['Diagnosis'];
+    state.aiSummary.source = 'Uploaded medical record';
+  }
+
+  renderUploadedList();
+  updateAISummary();
+  document.getElementById('scanOverlay').classList.remove('active');
+}
+function renderUploadedList(){
+  const el = document.getElementById('uploadedList');
+  if(state.documents.length===0){ el.innerHTML=''; return; }
+  el.innerHTML = '<div class="sub" style="margin:16px 0 6px;font-size:14px;">Added documents</div>' + state.documents.map(d=>`
+    <div class="extract-row" style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;">
+      <span>${d.icon} ${d.data['Document type']} — ${d.data['Date']||''}</span><b style="color:var(--green);">Added ✓</b>
+    </div>`).join('');
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+function buildTimeline(){
+  const el = document.getElementById('kioskTimeline');
+  const events = state.documents.map(d=>({
+    date:d.data['Date']||'Undated', title:d.data['Document type'], meta:(d.data['Diagnosis']||d.data['Test']||d.data['Notes']||'')
+  }));
+  events.push({date:'Today', title:'Current consultation — '+ (state.consultType==='ayush'?'Ayurveda':'General Medicine'), meta:'New intake via MediChrono'});
+  if(events.length<=1){
+    el.innerHTML = '<p>No previous documents were added — only today\'s visit will appear on your timeline.</p>';
+  } else {
+    el.innerHTML = events.map(ev=>`
+      <div class="tl-event">
+        <div class="tl-year">${ev.date}</div>
+        <div class="tl-card"><div class="tl-title">${ev.title}</div><div class="tl-meta">${ev.meta}</div></div>
+      </div>`).join('');
+  }
+  // Update the summary from the actual patient history + uploaded records.
+  const sumDocs = document.getElementById('sumDocs');
+  sumDocs.innerHTML = state.documents.length
+    ? state.documents.map(d=>`<li>${d.data['Document type']} (${d.data['Date']||'undated'})</li>`).join('')
+    : '<li>No documents uploaded</li>';
+
+  updateAISummary();
+}
+
+function updateAISummary(){
+  const complaint = state.patient.complaint || 'No patient complaint captured yet.';
+  const diagnosisFromDocs = state.documents
+    .map(d => d.data && d.data['Diagnosis'])
+    .filter(Boolean);
+
+  // Prefer an explicit disease/diagnosis present in the patient's records.
+  // Otherwise use the condition actually reported during the current intake.
+  const condition = diagnosisFromDocs.length
+    ? diagnosisFromDocs[0]
+    : (state.aiSummary.condition || complaint);
+
+  const source = diagnosisFromDocs.length
+    ? 'Source: uploaded medical record(s) — diagnosis extracted by OCR.'
+    : 'Source: current patient history — no diagnosis is assumed by default.';
+
+  document.getElementById('sumCondition').textContent = condition;
+  document.getElementById('sumConditionSource').textContent = source;
+  document.getElementById('sumComplaint').textContent = complaint;
+
+  const history = document.getElementById('sumHistory');
+  const answers = Array.from(document.querySelectorAll('#chatWindow .msg.patient'))
+    .map(el => el.textContent)
+    .filter(Boolean);
+
+  history.innerHTML = answers.length
+    ? answers.map(a => `<li>${a}</li>`).join('')
+    : '<li>History will be generated from the patient\'s answers.</li>';
+}
+
+/* =========================================================
+   STAFF DASHBOARD DATA
+========================================================= */
+const STAFF_QUEUE = [
+  {token:'A-101', name:'Ram Prasad', status:'In kiosk — step 3', step:'Documents', priority:'green'},
+  {token:'A-104', name:'Fatima Bano', status:'In kiosk — step 2', step:'History', priority:'yellow'},
+  {token:'A-108', name:'Sunita Devi', status:'In kiosk — step 2', step:'History', priority:'red'},
+  {token:'A-111', name:'Joseph K.', status:'Completed', step:'With doctor', priority:'green'},
+  {token:'A-114', name:'Radha Iyer', status:'In kiosk — step 4', step:'Review', priority:'amber'},
+  {token:'A-116', name:'Manoj Tiwari', status:'Waiting to start', step:'Identify', priority:'grey'},
+];
+function renderStaffTable(){
+  document.getElementById('staffTableBody').innerHTML = STAFF_QUEUE.map(p=>`
+    <tr><td>${p.token}</td><td>${p.name}</td><td>${p.status}</td><td>${p.step}</td>
+    <td><span class="badge badge-${p.priority}">${p.priority==='grey'?'⚪ Not started':p.priority==='red'?'🔴 High':p.priority==='amber'?'🟠 Attention':p.priority==='yellow'?'🟡 Monitor':'🟢 Routine'}</span></td></tr>
+  `).join('');
+}
+
+/* =========================================================
+   DOCTOR DASHBOARD + CASE DATA
+========================================================= */
+const PATIENTS = [
+  {id:'PAT-2026-00124', name:'Sunita Devi', age:54, gender:'Female', bg:'B+', dept:'General Medicine', complaint:'Chest discomfort since yesterday', priority:'red', lastVisit:'14 Sep 2026',
+    hpi:'Sudden onset chest discomfort yesterday evening, mild breathlessness, no radiation reported. No prior cardiac history documented by patient.',
+    pmh:['Hypertension (on Amlodipine 5mg)','No known diabetes'], surgical:['Cholecystectomy — District Hospital, Nov 2023'],
+    meds:['Amlodipine 5mg — once daily'], allergies:['No known drug allergies'], family:['Father — hypertension'],
+    investigations:['FBS 118 mg/dL (borderline) — Jul 2025'],
+    docs:[{type:'Prescription',date:'14 Mar 2025',note:'Amlodipine 5mg for hypertension'},{type:'Lab report',date:'02 Jul 2025',note:'Fasting blood sugar — borderline'},{type:'Discharge summary',date:'21 Nov 2023',note:'Cholecystectomy, uneventful recovery'}],
+    alerts:[{level:'red',text:'Red-flag: chest pain reported at kiosk — recommend prompt review'},{level:'amber',text:'Hypertension — on treatment'}]},
+  {id:'PAT-2026-00125', name:'Anitha K.', age:21, gender:'Female', bg:'O+', dept:'Ayurvedic', complaint:'Digestive discomfort', priority:'yellow', lastVisit:'13 Sep 2026',
+    hpi:'Recurrent bloating and irregular digestion over 3 weeks, worse after meals.',
+    pmh:['No chronic illness reported'], surgical:['None'], meds:['None currently'], allergies:['None reported'], family:['Mother — hypothyroidism'],
+    investigations:['None on file'], docs:[{type:'Ayurvedic consult note',date:'01 Sep 2026',note:'Vata-Pitta imbalance noted, dietary advice given'}],
+    alerts:[{level:'yellow',text:'Needs monitoring — recurring digestive complaint'}]},
+  {id:'PAT-2026-00126', name:'Kiran Shetty', age:19, gender:'Male', bg:'A+', dept:'General Medicine', complaint:'Fever + cold', priority:'green', lastVisit:'13 Sep 2026',
+    hpi:'Fever and cold symptoms for 2 days, no red-flag symptoms.',
+    pmh:['None'], surgical:['None'], meds:['Paracetamol as needed'], allergies:['None reported'], family:['None significant'],
+    investigations:['None'], docs:[], alerts:[{level:'green',text:'Routine — common cold presentation'}]},
+  {id:'PAT-2026-00127', name:'Ramesh Nair', age:61, gender:'Male', bg:'B-', dept:'General Medicine', complaint:'Follow-up — diabetes review', priority:'amber', lastVisit:'12 Sep 2026',
+    hpi:'Known type 2 diabetic, here for routine follow-up and medication review.',
+    pmh:['Type 2 diabetes (8 years)','Hypertension'], surgical:['None'], meds:['Metformin 500mg BD','Telmisartan 40mg OD'],
+    allergies:['Penicillin — rash (reported)'], family:['Both parents — diabetes'], investigations:['HbA1c 7.8% — Aug 2026'],
+    docs:[{type:'Lab report',date:'20 Aug 2026',note:'HbA1c 7.8%'}], alerts:[{level:'red',text:'Penicillin allergy on record'},{level:'amber',text:'HbA1c above target — needs review'}]},
+  {id:'PAT-2026-00128', name:'Lakshmi Bai', age:68, gender:'Female', bg:'AB+', dept:'Ayurvedic', complaint:'Joint pain, stiffness', priority:'yellow', lastVisit:'11 Sep 2026',
+    hpi:'Chronic knee joint pain, worse in mornings, ongoing 6 months.',
+    pmh:['Osteoarthritis (self-reported)'], surgical:['None'], meds:['None currently'], allergies:['None reported'], family:['None significant'],
+    investigations:['None on file'], docs:[{type:'Discharge summary',date:'2019',note:'Old hospitalisation for unrelated viral fever'}],
+    alerts:[{level:'yellow',text:'Chronic joint symptoms — monitor mobility'}]},
+  {id:'PAT-2026-00129', name:'Arjun Verma', age:8, gender:'Male', bg:'O-', dept:'Paediatrics', complaint:'Mild fever', priority:'green', lastVisit:'10 Sep 2026',
+    hpi:'Low-grade fever for 1 day, active and playful, no other symptoms.',
+    pmh:['Fully immunised'], surgical:['None'], meds:['None'], allergies:['None reported'], family:['None significant'],
+    investigations:['None'], docs:[], alerts:[{level:'green',text:'Routine paediatric presentation'}]},
+];
+function priorityLabel(p){ return {red:'🔴 HIGH', amber:'🟠 ATTENTION', yellow:'🟡 MONITOR', green:'🟢 ROUTINE', grey:'⚪ UNSCREENED'}[p]; }
+
+function renderDoctorTable(){
+  document.getElementById('doctorTableBody').innerHTML = PATIENTS.map(p=>`
+    <tr>
+      <td>${p.id}</td><td>${p.name}</td><td>${p.age}</td><td>${p.dept}</td><td>${p.complaint}</td>
+      <td><span class="badge badge-${p.priority}">${priorityLabel(p.priority)}</span></td>
+      <td>${p.lastVisit}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openCase('${p.id}')">View case</button></td>
+    </tr>`).join('');
+}
+
+const CASE_TABS = ['Overview','History','Medications','Allergies','Investigations','Documents','AI Summary'];
+function openCase(id){
+  state.currentCaseId = id;
+  const p = PATIENTS.find(x=>x.id===id);
+  document.getElementById('caseName').textContent = p.name+' • '+p.age+' • '+p.gender;
+  document.getElementById('caseMeta').textContent = p.id+' | Blood group '+p.bg+' | '+p.dept+' | Last visit '+p.lastVisit;
+  document.getElementById('casePriorityBadge').className = 'badge badge-'+p.priority;
+  document.getElementById('casePriorityBadge').textContent = priorityLabel(p.priority);
+
+  document.getElementById('caseTabs').innerHTML = CASE_TABS.map((t,i)=>`<div class="tab ${i===0?'active':''}" data-tab="${t}" onclick="switchTab('${t}')">${t}</div>`).join('');
+
+  const panels = {
+    'Overview': `<div class="field-grid">
+        <div class="fi"><label>Chief complaint</label><div class="v">${p.complaint}</div></div>
+        <div class="fi"><label>HPI</label><div class="v">${p.hpi}</div></div>
+        <div class="fi"><label>Past medical history</label><div class="v">${p.pmh.join(', ')}</div></div>
+        <div class="fi"><label>Surgical history</label><div class="v">${p.surgical.join(', ')}</div></div>
+        <div class="fi"><label>Family history</label><div class="v">${p.family.join(', ')}</div></div>
+      </div>`,
+    'History': `<div class="field-grid">
+        <div class="fi"><label>History of present illness</label><div class="v">${p.hpi}</div></div>
+        <div class="fi"><label>Past medical history</label><div class="v">${p.pmh.join(', ')}</div></div>
+        <div class="fi"><label>Surgical history</label><div class="v">${p.surgical.join(', ')}</div></div>
+      </div>`,
+    'Medications': `<div class="field-grid"><div class="fi"><label>Current / previous medications</label><div class="v">${p.meds.join(', ')}</div></div></div>`,
+    'Allergies': `<div class="field-grid"><div class="fi"><label>Allergy history</label><div class="v">${p.allergies.join(', ')}</div></div></div>`,
+    'Investigations': `<div class="field-grid"><div class="fi"><label>Investigations on file</label><div class="v">${p.investigations.join(', ')}</div></div></div>`,
+    'Documents': p.docs.length ? `<div class="timeline">${p.docs.map(d=>`<div class="tl-event"><div class="tl-year">${d.date}</div><div class="tl-card"><div class="tl-title">${d.type}</div><div class="tl-meta">${d.note}</div></div></div>`).join('')}</div>` : `<div class="empty-state">No documents uploaded for this patient yet.</div>`,
+    'AI Summary': `<div class="summary-block">
+        <h3>Doctor quick view</h3>
+        <ul>${p.alerts.map(a=>`<li>${a.level==='red'?'🔴':a.level==='amber'?'🟠':a.level==='yellow'?'🟡':'🟢'} ${a.text}</li>`).join('')}</ul>
+      </div>
+      <div class="summary-block"><h3>Chief complaint</h3><ul><li>${p.complaint}</li></ul></div>
+      <div class="summary-block"><h3>Medical history</h3><ul><li>${p.pmh.join('</li><li>')}</li></ul></div>
+      <div class="ai-disclaimer">🤖 AI-assisted summary. Verify against original records before clinical decisions.</div>`
+  };
+  document.getElementById('caseTabPanels').innerHTML = CASE_TABS.map((t,i)=>`<div class="tab-panel ${i===0?'active':''}" data-panel="${t}">${panels[t]}</div>`).join('');
+
+  document.getElementById('caseAlerts').innerHTML = p.alerts.map(a=>`
+    <div class="alert-item">${a.level==='red'?'🔴':a.level==='amber'?'🟠':a.level==='yellow'?'🟡':'🟢'} ${a.text}</div>
+  `).join('');
+
+  goTo('screen-case');
+}
+function switchTab(t){
+  document.querySelectorAll('#caseTabs .tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
+  document.querySelectorAll('#caseTabPanels .tab-panel').forEach(el=>el.classList.toggle('active', el.dataset.panel===t));
+}
+function verifyCase(){
+  alert('Summary marked as verified by Dr. Sharma. (Demo action — not persisted.)');
+}
+
+/* init */
+renderProgress('progress-track', 0);
+updateAISummary();
+</script>
+</body>
+</html>
